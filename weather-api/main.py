@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 import httpx
 
@@ -24,14 +24,48 @@ def home():
 
 
 @app.get("/weather", response_model=WeatherResponse)
-def get_weather(city: str):
+def get_weather(
+    city: str = Query(..., min_length=2, max_length=100)
+):
     params = {
         "key": WEATHER_API_KEY,
         "q": city
     }
 
-    response = httpx.get(WEATHER_API_URL, params=params)
+    try:
+        response = httpx.get(
+            WEATHER_API_URL,
+            params=params,
+            timeout=10
+        )
+
+    except httpx.RequestError:
+        raise HTTPException(
+            status_code=502,
+            detail="Unable to connect to weather service"
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(
+            status_code=502,
+            detail="Weather service returned an error"
+        )
+
     data = response.json()
+
+    if "error" in data:
+        error_code = data["error"]["code"]
+
+        if error_code == 1006:
+            raise HTTPException(
+                status_code=404,
+                detail="City not found"
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail="Weather service returned an error"
+        )
 
     return {
         "city": data["location"]["name"],
