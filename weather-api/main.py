@@ -1,10 +1,14 @@
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
+from dotenv import load_dotenv
 import httpx
+import os
+
+load_dotenv()
 
 app = FastAPI(title="Weather API")
 
-WEATHER_API_KEY = "YOUR_API_KEY"
+WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
 WEATHER_API_URL = "https://api.weatherapi.com/v1/current.json"
 
 
